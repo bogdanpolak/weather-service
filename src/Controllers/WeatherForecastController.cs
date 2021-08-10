@@ -3,8 +3,11 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using MediatR;
 using WeatherService.Contracts;
 using WeatherService.Domain.Model;
+using WeatherService.Features;
 
 namespace WeatherService.Controllers
 {
@@ -12,56 +15,42 @@ namespace WeatherService.Controllers
     [Route("[controller]")]
     public class WeatherForecastController : ControllerBase
     {
-        private static readonly string[] Summaries = new[]
-        {
-            "cloudy", "mostly cloudy", "broken clouds", "scattered clouds", "partly sunny", "mostly sunny", "sunny"
-        };
-        private static readonly string[] RainSummaries = new[]
-        {
-            "showers, broken clouds", "light showers, overcast", "sprinkles, overcast", "rain, cloudy", "heavy rain, cloudy"
-        };
-
-
         private readonly ILogger<WeatherForecastController> _logger;
-        private readonly ILocationInfoRepository _locationInfoRepository; 
+        private readonly IMediator _mediator;
 
         public WeatherForecastController(
             ILogger<WeatherForecastController> logger, 
-            ILocationInfoRepository locationInfoRepository)
+            ILocationInfoRepository locationInfoRepository, 
+            IMediator mediator)
         {
             _logger = logger;
-            _locationInfoRepository = locationInfoRepository;
+            _mediator = mediator;
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<WeatherForecast>> Get(string location, int days)
+        public async Task<ActionResult<WeatherForecast>> Get(string location, int days)
         {
-            var locationCode = location;
-            _logger.LogInformation($"[GET /weatherforecast ? location={locationCode} & days={days}]");
-            var locationInfo = _locationInfoRepository.GetLocationInfo(locationCode);
-            if (days > 20)
-                return BadRequest("Forecast can be generated for maximum 20 days");
-            if (locationInfo == null)
-                return NotFound();
-            var random = new Random();
-            var meanMonthTemp = locationInfo.MeanTemperatures[DateTime.Now.Month - 1];
-            var dayForecasts = Enumerable.Range(1, days)
-                .Select(index => new DayForecast 
-                {
-                    Date = DateTime.Now.AddDays(index).Date,
-                    Temperature = random.Next(meanMonthTemp.Minimal, meanMonthTemp.Maximum),
-                    Summary = (random.Next(5)!=0) ? Summaries[random.Next(Summaries.Length)]
-                        : RainSummaries[random.Next(RainSummaries.Length)]
-                })
-                .ToList();
-            var weatherForecast = new WeatherForecast
+            _logger.LogInformation($"[GET /weatherforecast ? location={location} & days={days}]");
+            try
             {
-                LocationCode = locationCode,
-                Generated = DateTimeOffset.Now,
-                TemperatureScale = "celsius" // fahrenheit : 32 + (int)(celsius / 0.5556);
-            };
-            weatherForecast.Days.AddRange(dayForecasts);
-            return Ok(weatherForecast);
+                var request = new GenerateWeatherFeature.Query
+                {
+                    LocationCode = location,
+                    DaysToGenerate = days
+                };
+                var weatherForecast = _mediator.Send(request);
+                return Ok(await weatherForecast);
+            }
+            catch (GenerateWeatherFeature.InvalidLocationCodeException exception)
+            {
+                _logger.LogError(exception, exception.Message);
+                return NotFound(exception.Message);
+            }
+            catch (GenerateWeatherFeature.GenerateDaysOutOfRangeException exception)
+            {
+                _logger.LogError(exception, exception.Message);
+                return BadRequest(exception.Message);
+            }
         }
     }
 }

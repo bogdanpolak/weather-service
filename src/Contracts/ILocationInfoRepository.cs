@@ -1,11 +1,11 @@
-﻿using WeatherService.Domain.Model;
-using WeatherService.Repositories;
+﻿using System.Threading.Tasks;
+using WeatherService.Domain.Model;
 
 namespace WeatherService.Contracts
 {
     public interface ILocationInfoRepository
     {
-        LocationInfo GetLocationInfo(string locationCode);
-        string[] GetLocations();
+        Task<LocationInfo> GetLocationInfo(string locationCode);
+        Task<string[]> GetLocations();
     }
 }

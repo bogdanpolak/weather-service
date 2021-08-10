@@ -9,7 +9,9 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
+using MediatR;
 using WeatherService.IoC;
 
 namespace WeatherService
@@ -28,6 +30,7 @@ namespace WeatherService
         {
             services.AddControllers();
             services.AddApplicationServices();
+            services.AddMediatR(typeof(Startup).Assembly);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

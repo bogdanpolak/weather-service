@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using WeatherService.Contracts;
 using WeatherService.Domain.Model;
 
@@ -15,16 +16,16 @@ namespace WeatherService.Repositories
             new LocationInfo("usa/san-francisco", "8 14,9 16,9 17,10 17,11 18,12 19,12 19,13 20,13 21,12 21,10 17,8 14"),
         };
 
-        public LocationInfo GetLocationInfo(string locationCode)
+        public Task<LocationInfo> GetLocationInfo(string locationCode)
         {
-            return _locationInfos
-                .FirstOrDefault(l => l.LocationCode == locationCode);
+            return Task.Run(() => _locationInfos
+                .FirstOrDefault(l => l.LocationCode == locationCode));
         }
 
-        public string[] GetLocations()
+        public Task<string[]> GetLocations()
         {
-            var locations = _locationInfos.Select(l=>l.LocationCode).ToArray();
-            return locations;
+            return Task.Run( () => _locationInfos
+                .Select(l=>l.LocationCode).ToArray());
         }
     }
 }
